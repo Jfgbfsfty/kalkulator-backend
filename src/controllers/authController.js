@@ -99,10 +99,12 @@ const login = async (req, res) => {
     });
 
     // Ustaw refresh token w httpOnly cookie (nie dostępny przez JS – ochrona XSS)
+    // SameSite=None wymagane bo frontend i backend są na różnych subdomenach up.railway.app (PSL)
+    const isProduction = process.env.NODE_ENV === 'production';
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dni w ms
       path: '/api/auth',
     });
@@ -198,7 +200,12 @@ const logout = async (req, res) => {
     }
   }
 
-  res.clearCookie('refreshToken', { path: '/api/auth' });
+  const isProduction = process.env.NODE_ENV === 'production';
+  res.clearCookie('refreshToken', {
+    path: '/api/auth',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+  });
 
   if (req.user) {
     await logAction('LOGOUT', {
