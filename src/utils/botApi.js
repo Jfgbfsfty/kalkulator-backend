@@ -6,8 +6,8 @@ const logger = require('./logger');
  * Used for sending Discord messages, manage roles etc.
  */
 const callBotApi = async (endpoint, data = {}, method = 'POST') => {
-  const botUrl = process.env.BOT_API_URL || 'http://localhost:3001';
-  const secret = process.env.BOT_API_SECRET;
+  const botUrl = (process.env.BOT_API_URL || 'http://localhost:3001').replace(/^["']|["']$/g, '');
+  const secret = (process.env.BOT_API_SECRET || '').replace(/^["']|["']$/g, '');
 
   const response = await axios({
     method,
