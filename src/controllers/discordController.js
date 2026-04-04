@@ -12,8 +12,8 @@ const roleValidation = [
  * Wysyła żądanie do bota Discord przez jego lokalny HTTP API
  */
 const callBotApi = async (endpoint, data) => {
-  const botUrl = process.env.BOT_API_URL || 'http://localhost:3001';
-  const secret = process.env.BOT_API_SECRET;
+  const botUrl = (process.env.BOT_API_URL || 'http://localhost:3001').replace(/^["']|["']$/g, '');
+  const secret = (process.env.BOT_API_SECRET || '').replace(/^["']|["']$/g, '');
 
   const response = await axios.post(`${botUrl}${endpoint}`, data, {
     headers: {

@@ -7,7 +7,8 @@ const { botDutyOn, botDutyOff, botDutyStats } = require('../controllers/dutyCont
 
 const verifyBotSecret = (req, res, next) => {
   const secret = req.headers['x-bot-secret'];
-  if (!secret || secret !== process.env.BOT_API_SECRET) {
+  const expected = (process.env.BOT_API_SECRET || '').replace(/^["']|["']$/g, '');
+  if (!secret || secret !== expected) {
     return res.status(401).json({ success: false, message: 'Nieautoryzowany dostęp do Bot API' });
   }
   next();
