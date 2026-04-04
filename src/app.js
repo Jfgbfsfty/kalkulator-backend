@@ -88,6 +88,32 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Tymczasowy endpoint do uruchomienia seeda (tylko z tokenem)
+app.post('/api/run-seed', async (req, res) => {
+  const { token } = req.body;
+  if (token !== process.env.SEED_SECRET) {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+  try {
+    const bcrypt = require('bcryptjs');
+    const User = require('./models/User');
+    const username = process.env.SUPERADMIN_USERNAME || '_lama_7';
+    const password = process.env.SUPERADMIN_PASSWORD || '58452';
+    const salt = await bcrypt.genSalt(12);
+    const hash = await bcrypt.hash(password, salt);
+    const existing = await User.findOne({ role: 'SUPERADMIN' });
+    if (existing) {
+      await User.updateOne({ role: 'SUPERADMIN' }, { username, password: hash });
+      return res.json({ success: true, message: 'Zaktualizowano superadmina' });
+    } else {
+      await User.create({ username, password: hash, role: 'SUPERADMIN' });
+      return res.json({ success: true, message: 'Utworzono superadmina' });
+    }
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 // ===========================
 // ERROR HANDLING
 // ===========================
