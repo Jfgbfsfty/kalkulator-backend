@@ -3,6 +3,7 @@ const Promotion = require('../models/Promotion');
 const { PLAYER_RANKS } = require('../models/Promotion');
 const callBotApi = require('../utils/botApi');
 const { logAction, getClientIp } = require('../middleware/auditLogger');
+const sendDiscordAudit = require('../utils/discordAudit');
 const logger = require('../utils/logger');
 
 const promotionValidation = [
@@ -117,6 +118,7 @@ const createPromotion = async (req, res) => {
       details: { playerNick, type, fromRank, toRank, signedBy },
       ipAddress: getClientIp(req),
     });
+    sendDiscordAudit('CREATE_PROMOTION', req.user.username, { 'Gracz': playerNick, 'Typ': type, 'Zmiana stopnia': `${fromRank} → ${toRank}`, 'Powód': reason, 'Podpisał': signedBy }, getClientIp(req));
 
     res.status(201).json({ success: true, data: promotion });
   } catch (err) {
@@ -141,6 +143,7 @@ const deletePromotion = async (req, res) => {
       details: { playerNick: promotion.playerNick, type: promotion.type },
       ipAddress: getClientIp(req),
     });
+    sendDiscordAudit('DELETE_PROMOTION', req.user.username, { 'Nick': promotion.playerNick, 'Typ': promotion.type }, getClientIp(req));
 
     res.json({ success: true, message: 'Usunięto' });
   } catch (err) {

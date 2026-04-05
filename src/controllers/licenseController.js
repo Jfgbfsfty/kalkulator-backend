@@ -1,6 +1,7 @@
 const { body, validationResult } = require('express-validator');
 const CollectedLicense = require('../models/CollectedLicense');
 const { logAction, getClientIp } = require('../middleware/auditLogger');
+const sendDiscordAudit = require('../utils/discordAudit');
 const logger = require('../utils/logger');
 
 const validation = [
@@ -40,6 +41,7 @@ const create = async (req, res) => {
       details: { nick: license.nick, reason: license.reason },
       ipAddress: getClientIp(req),
     });
+    sendDiscordAudit('COLLECT_LICENSE', req.user.username, { 'Nick gracza': license.nick, 'Powód': license.reason }, getClientIp(req));
     const populated = await CollectedLicense.findById(license._id).populate('takenBy', 'username');
     res.status(201).json({ success: true, data: populated });
   } catch (err) {
@@ -67,6 +69,7 @@ const update = async (req, res) => {
       },
       ipAddress: getClientIp(req),
     });
+    sendDiscordAudit('UPDATE_LICENSE', req.user.username, { 'Nick gracza': license.nick, 'Zwrot': updateData.isReturned ? 'TAK' : 'NIE', ...Object.fromEntries(Object.entries(updateData).filter(([k]) => k !== 'isReturned').map(([k,v]) => [k, String(v)])) }, getClientIp(req));
     res.status(200).json({ success: true, data: updated });
   } catch (err) {
     logger.error(`updateLicense: ${err.message}`);

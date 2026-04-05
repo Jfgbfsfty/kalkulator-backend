@@ -1,6 +1,7 @@
 const { body, validationResult } = require('express-validator');
 const Mandate = require('../models/Mandate');
 const { logAction, getClientIp } = require('../middleware/auditLogger');
+const sendDiscordAudit = require('../utils/discordAudit');
 const logger = require('../utils/logger');
 
 const mandateValidation = [
@@ -62,6 +63,7 @@ const createMandate = async (req, res) => {
       },
       ipAddress: getClientIp(req),
     });
+    sendDiscordAudit('CREATE_MANDATE', req.user.username, { 'Tytuł': mandate.title, 'Cena': `${mandate.price} zł`, 'Kategoria': mandate.category, 'Punkty karne': mandate.penaltyPoints }, getClientIp(req));
 
     res.status(201).json({ success: true, data: mandate });
   } catch (err) {
@@ -109,6 +111,7 @@ const updateMandate = async (req, res) => {
       },
       ipAddress: getClientIp(req),
     });
+    sendDiscordAudit('UPDATE_MANDATE', req.user.username, { 'Mandat': mandate.title, 'Zmiany': Object.entries(updateData).filter(([k]) => k !== 'updatedBy').map(([k, v]) => `${k}: ${v}`).join(', ') }, getClientIp(req));
 
     res.status(200).json({ success: true, data: updated });
   } catch (err) {
@@ -135,6 +138,7 @@ const deleteMandate = async (req, res) => {
       details: { title: mandate.title, price: mandate.price, category: mandate.category, penaltyPoints: mandate.penaltyPoints },
       ipAddress: getClientIp(req),
     });
+    sendDiscordAudit('DELETE_MANDATE', req.user.username, { 'Tytuł': mandate.title, 'Cena': `${mandate.price} zł`, 'Kategoria': mandate.category }, getClientIp(req));
 
     res.status(200).json({ success: true, message: 'Mandat usunięty' });
   } catch (err) {

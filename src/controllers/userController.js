@@ -1,6 +1,7 @@
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const { logAction, getClientIp } = require('../middleware/auditLogger');
+const sendDiscordAudit = require('../utils/discordAudit');
 const logger = require('../utils/logger');
 
 const createUserValidation = [
@@ -84,6 +85,7 @@ const createUser = async (req, res) => {
       details: { username, role },
       ipAddress: getClientIp(req),
     });
+    sendDiscordAudit('CREATE_USER', req.user.username, { 'Nowy użytkownik': username, 'Rola': role }, getClientIp(req));
 
     res.status(201).json({
       success: true,
@@ -148,6 +150,7 @@ const updateUser = async (req, res) => {
       details: { changes: updateData },
       ipAddress: getClientIp(req),
     });
+    sendDiscordAudit('UPDATE_USER', req.user.username, { 'Użytkownik': target.username, 'Rola': target.role, 'Zmiany': JSON.stringify(updateData) }, getClientIp(req));
 
     res.status(200).json({ success: true, data: updated });
   } catch (err) {
@@ -180,6 +183,7 @@ const deleteUser = async (req, res) => {
       details: { username: target.username, role: target.role },
       ipAddress: getClientIp(req),
     });
+    sendDiscordAudit('DELETE_USER', req.user.username, { 'Usunięty użytkownik': target.username, 'Rola': target.role }, getClientIp(req));
 
     res.status(200).json({ success: true, message: 'Użytkownik usunięty' });
   } catch (err) {

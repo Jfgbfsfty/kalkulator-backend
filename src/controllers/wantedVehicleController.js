@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const WantedVehicle = require('../models/WantedVehicle');
 const { logAction, getClientIp } = require('../middleware/auditLogger');
+const sendDiscordAudit = require('../utils/discordAudit');
 const logger = require('../utils/logger');
 
 const deleteImageFile = (imageUrl) => {
@@ -58,6 +59,7 @@ const create = async (req, res) => {
       details: { model: vehicle.model, owner: vehicle.owner, licensePlate: vehicle.licensePlate, reason: vehicle.reason, status: vehicle.status },
       ipAddress: getClientIp(req),
     });
+    sendDiscordAudit('CREATE_WANTED_VEHICLE', req.user.username, { 'Model': vehicle.model, 'Właściciel': vehicle.owner, 'Nr rejestracyjny': vehicle.licensePlate || '—', 'Powód': vehicle.reason }, getClientIp(req));
     res.status(201).json({ success: true, data: vehicle });
   } catch (err) {
     logger.error(`createWantedVehicle: ${err.message}`);
@@ -95,6 +97,7 @@ const update = async (req, res) => {
       },
       ipAddress: getClientIp(req),
     });
+    sendDiscordAudit('UPDATE_WANTED_VEHICLE', req.user.username, { 'Model': vehicle.model, 'Nowy status': updateData.status || '—', 'Zmiany': Object.entries(updateData).filter(([k]) => k !== 'updatedBy').map(([k,v]) => `${k}: ${v}`).join(', ') }, getClientIp(req));
     res.status(200).json({ success: true, data: updated });
   } catch (err) {
     logger.error(`updateWantedVehicle: ${err.message}`);
@@ -114,6 +117,7 @@ const remove = async (req, res) => {
       details: { model: vehicle.model, owner: vehicle.owner, licensePlate: vehicle.licensePlate, status: vehicle.status },
       ipAddress: getClientIp(req),
     });
+    sendDiscordAudit('DELETE_WANTED_VEHICLE', req.user.username, { 'Model': vehicle.model, 'Właściciel': vehicle.owner, 'Nr rej.': vehicle.licensePlate || '—' }, getClientIp(req));
     res.status(200).json({ success: true, message: 'Usunięto' });
   } catch (err) {
     logger.error(`deleteWantedVehicle: ${err.message}`);

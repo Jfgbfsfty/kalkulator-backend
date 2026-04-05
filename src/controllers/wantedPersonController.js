@@ -1,6 +1,7 @@
 const { body, validationResult } = require('express-validator');
 const WantedPerson = require('../models/WantedPerson');
 const { logAction, getClientIp } = require('../middleware/auditLogger');
+const sendDiscordAudit = require('../utils/discordAudit');
 const logger = require('../utils/logger');
 
 const validation = [
@@ -43,6 +44,7 @@ const create = async (req, res) => {
       details: { nick: person.nick, reason: person.reason, status: person.status },
       ipAddress: getClientIp(req),
     });
+    sendDiscordAudit('CREATE_WANTED_PERSON', req.user.username, { 'Nick': person.nick, 'Powód': person.reason, 'Status': person.status }, getClientIp(req));
     res.status(201).json({ success: true, data: person });
   } catch (err) {
     logger.error(`createWantedPerson: ${err.message}`);
@@ -75,6 +77,7 @@ const update = async (req, res) => {
       },
       ipAddress: getClientIp(req),
     });
+    sendDiscordAudit('UPDATE_WANTED_PERSON', req.user.username, { 'Nick': person.nick, 'Nowy status': updateData.status || '—', 'Zmiany': Object.entries(updateData).filter(([k]) => k !== 'updatedBy').map(([k,v]) => `${k}: ${v}`).join(', ') }, getClientIp(req));
 
     res.status(200).json({ success: true, data: updated });
   } catch (err) {
@@ -94,6 +97,7 @@ const remove = async (req, res) => {
       details: { nick: person.nick, reason: person.reason, status: person.status },
       ipAddress: getClientIp(req),
     });
+    sendDiscordAudit('DELETE_WANTED_PERSON', req.user.username, { 'Nick': person.nick, 'Powód': person.reason }, getClientIp(req));
     res.status(200).json({ success: true, message: 'Usunięto' });
   } catch (err) {
     logger.error(`deleteWantedPerson: ${err.message}`);

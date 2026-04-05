@@ -3,6 +3,7 @@ const User = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
 const { generateAccessToken, generateRefreshToken, hashRefreshToken } = require('../utils/jwt');
 const { logAction, getClientIp } = require('../middleware/auditLogger');
+const sendDiscordAudit = require('../utils/discordAudit');
 const logger = require('../utils/logger');
 
 // Reguły walidacji dla logowania
@@ -115,8 +116,9 @@ const login = async (req, res) => {
       ipAddress: ip,
       userAgent: ua,
     });
+    sendDiscordAudit('LOGIN', user.username, { 'Konto': user.username, 'Rola': user.role }, ip);
 
-    logger.info(`Zalogowano: ${user.username} [${user.role}] z IP: ${ip}`);
+    logger.info(`Zalogowano: ${user.username} [${user.role}] z IP: ${ip}`);;
 
     res.status(200).json({
       success: true,

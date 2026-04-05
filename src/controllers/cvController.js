@@ -2,6 +2,7 @@ const { body, validationResult } = require('express-validator');
 const CvApplication = require('../models/CvApplication');
 const callBotApi = require('../utils/botApi');
 const { logAction, getClientIp } = require('../middleware/auditLogger');
+const sendDiscordAudit = require('../utils/discordAudit');
 const logger = require('../utils/logger');
 
 const cvValidation = [
@@ -73,6 +74,7 @@ const submitCv = async (req, res) => {
       details: { nick, age },
       ipAddress: getClientIp(req),
     });
+    sendDiscordAudit('SUBMIT_CV', req.user?.username || nick, { 'Nick': nick, 'Wiek': age, 'Kontakt Discord': contactDiscord || '—' }, getClientIp(req));
 
     res.status(201).json({ success: true, data: cv });
   } catch (err) {
