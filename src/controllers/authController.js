@@ -50,15 +50,6 @@ const login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Nieprawidłowe dane logowania' });
     }
 
-    // Sprawdź blokadę konta
-    if (user.isLocked()) {
-      const minutesLeft = Math.ceil((user.lockedUntil - Date.now()) / 60000);
-      return res.status(429).json({
-        success: false,
-        message: `Konto zablokowane. Spróbuj za ${minutesLeft} minut(y).`,
-      });
-    }
-
     // Sprawdź, czy konto jest aktywne
     if (!user.isActive) {
       return res.status(403).json({ success: false, message: 'Konto jest nieaktywne' });

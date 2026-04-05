@@ -88,17 +88,14 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Sprawdź, czy konto jest zablokowane
+// Sprawdź, czy konto jest zablokowane (blokada wyłączona)
 userSchema.methods.isLocked = function () {
-  return this.lockedUntil && this.lockedUntil > Date.now();
+  return false;
 };
 
-// Zwiększ licznik nieudanych logowań (blokada po 5 próbach przez 15 min)
+// Zwiększ licznik nieudanych logowań (bez blokady)
 userSchema.methods.incFailedLogins = async function () {
   this.failedLoginAttempts += 1;
-  if (this.failedLoginAttempts >= 5) {
-    this.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
-  }
   return this.save();
 };
 
