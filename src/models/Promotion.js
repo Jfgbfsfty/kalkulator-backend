@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const PLAYER_RANKS = ['Kadet', 'Drogówka', 'Sierżant', 'Z-szef', 'Szef'];
+const PLAYER_RANKS = ['Drógówka', 'Kadet', 'Sierżant', 'Z-szef', 'Szef'];
 
 const promotionSchema = new mongoose.Schema(
   {

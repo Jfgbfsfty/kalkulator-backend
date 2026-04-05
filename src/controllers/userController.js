@@ -15,7 +15,7 @@ const createUserValidation = [
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).withMessage('Hasło musi zawierać małą i wielką literę oraz cyfrę'),
   body('role')
     .optional()
-    .isIn(['SUPERADMIN', 'SZEF', 'POLICJANT']).withMessage('Nieprawidłowa rola'),
+    .isIn(['SUPERADMIN', 'SZEF', 'ZASTEPCA', 'POLICJANT']).withMessage('Nieprawidłowa rola'),
 ];
 
 /**
