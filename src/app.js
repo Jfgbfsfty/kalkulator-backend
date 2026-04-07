@@ -23,6 +23,7 @@ const botDutyRoutes = require('./routes/botDuty');
 const dutyRoutes = require('./routes/duty');
 const promotionRoutes = require('./routes/promotions');
 const cvRoutes = require('./routes/cv');
+const salaryRoutes = require('./routes/salary');
 
 const app = express();
 
@@ -83,6 +84,7 @@ app.use('/api/bot-duty', botDutyRoutes);
 app.use('/api/duty', dutyRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/cv', cvRoutes);
+app.use('/api/salary-config', salaryRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
