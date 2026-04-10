@@ -12,6 +12,7 @@ const dismissalValidation = [
   body('signedBy').trim().notEmpty().isLength({ max: 100 }).withMessage('Podpisał wymagane (max 100)'),
   body('playerDiscordId').optional({ checkFalsy: true }).trim().isString().isLength({ max: 30 }),
   body('playerDiscordUsername').optional({ checkFalsy: true }).trim().isString().isLength({ max: 100 }),
+  body('sendToChannel').optional().isBoolean(),
 ];
 
 /**
@@ -50,7 +51,7 @@ const createDismissal = async (req, res) => {
   if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
   try {
-    const { playerNick, playerDiscordId, playerDiscordUsername, rank, reason, signedBy } = req.body;
+    const { playerNick, playerDiscordId, playerDiscordUsername, rank, reason, signedBy, sendToChannel } = req.body;
 
     const dismissal = await Dismissal.create({
       playerNick,
@@ -83,6 +84,7 @@ const createDismissal = async (req, res) => {
       const botRes = await callBotApi('/api/send-dismissal', {
         embed,
         discordUserId: playerDiscordId || null,
+        sendToChannel: sendToChannel !== false,
       });
       dmSent = botRes.dmSent || false;
       roleRemoved = botRes.roleRemoved || false;

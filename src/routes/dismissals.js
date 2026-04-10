@@ -15,8 +15,8 @@ const { writeLimiter } = require('../middleware/rateLimiter');
 
 router.use(authenticate);
 
-router.get('/', authorize('SZEF'), getDismissals);
-router.post('/', authorize('SZEF'), writeLimiter, dismissalValidation, createDismissal);
+router.get('/', authorize('ZASTEPCA'), getDismissals);
+router.post('/', authorize('ZASTEPCA'), writeLimiter, dismissalValidation, createDismissal);
 router.delete('/:id', authorize('SZEF'), deleteDismissal);
 
 module.exports = router;
