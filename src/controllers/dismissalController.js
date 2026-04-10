@@ -66,7 +66,7 @@ const createDismissal = async (req, res) => {
 
     const embed = {
       color: 0xff0000,
-      title: '🚫 ZWOLNIENIE ZE SŁUŻBY',
+      title: '🚫 ZWOLNIENIE',
       fields: [
         { name: '👮 Gracz', value: playerNick, inline: true },
         { name: '🎖️ Stopień', value: rank, inline: true },
