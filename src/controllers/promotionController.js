@@ -86,7 +86,7 @@ const createPromotion = async (req, res) => {
 
     let discordMessageId = null;
     try {
-      const botRes = await callBotApi('/api/send-promotion', { embed });
+      const botRes = await callBotApi('/api/send-promotion', { embed, discordUserId: playerDiscordId || null });
       discordMessageId = botRes.messageId || null;
     } catch (botErr) {
       logger.warn(`Promotion Discord send failed: ${botErr.message}`);
