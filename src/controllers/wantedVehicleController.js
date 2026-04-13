@@ -56,6 +56,8 @@ const create = async (req, res) => {
     await logAction('CREATE_WANTED_VEHICLE', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       details: { model: vehicle.model, owner: vehicle.owner, licensePlate: vehicle.licensePlate, reason: vehicle.reason, status: vehicle.status },
       ipAddress: getClientIp(req),
     });
@@ -90,6 +92,8 @@ const update = async (req, res) => {
     await logAction('UPDATE_WANTED_VEHICLE', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       details: {
         model: vehicle.model,
         before: { model: vehicle.model, owner: vehicle.owner, licensePlate: vehicle.licensePlate, reason: vehicle.reason, status: vehicle.status },
@@ -114,6 +118,8 @@ const remove = async (req, res) => {
     await logAction('DELETE_WANTED_VEHICLE', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       details: { model: vehicle.model, owner: vehicle.owner, licensePlate: vehicle.licensePlate, status: vehicle.status },
       ipAddress: getClientIp(req),
     });

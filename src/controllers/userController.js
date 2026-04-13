@@ -81,6 +81,8 @@ const createUser = async (req, res) => {
     await logAction('CREATE_USER', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       targetUser: user._id,
       details: { username, role },
       ipAddress: getClientIp(req),
@@ -146,6 +148,8 @@ const updateUser = async (req, res) => {
     await logAction('UPDATE_USER', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       targetUser: target._id,
       details: { changes: updateData },
       ipAddress: getClientIp(req),
@@ -179,6 +183,8 @@ const deleteUser = async (req, res) => {
     await logAction('DELETE_USER', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       targetUser: target._id,
       details: { username: target.username, role: target.role },
       ipAddress: getClientIp(req),

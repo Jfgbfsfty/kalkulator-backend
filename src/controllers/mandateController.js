@@ -53,6 +53,8 @@ const createMandate = async (req, res) => {
     await logAction('CREATE_MANDATE', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       targetResource: `mandate:${mandate._id}`,
       details: {
         title: mandate.title,
@@ -95,6 +97,8 @@ const updateMandate = async (req, res) => {
     await logAction('UPDATE_MANDATE', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       targetResource: `mandate:${mandate._id}`,
       details: {
         title: mandate.title,
@@ -134,6 +138,8 @@ const deleteMandate = async (req, res) => {
     await logAction('DELETE_MANDATE', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       targetResource: `mandate:${mandate._id}`,
       details: { title: mandate.title, price: mandate.price, category: mandate.category, penaltyPoints: mandate.penaltyPoints },
       ipAddress: getClientIp(req),

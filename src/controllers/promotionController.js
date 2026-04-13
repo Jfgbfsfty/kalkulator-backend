@@ -115,6 +115,8 @@ const createPromotion = async (req, res) => {
     await logAction('CREATE_PROMOTION', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       details: { playerNick, type, fromRank, toRank, signedBy },
       ipAddress: getClientIp(req),
     });
@@ -140,6 +142,8 @@ const deletePromotion = async (req, res) => {
     await logAction('DELETE_PROMOTION', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       details: { playerNick: promotion.playerNick, type: promotion.type },
       ipAddress: getClientIp(req),
     });

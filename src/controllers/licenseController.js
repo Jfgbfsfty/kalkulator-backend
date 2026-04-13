@@ -38,6 +38,8 @@ const create = async (req, res) => {
     await logAction('COLLECT_LICENSE', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       details: { nick: license.nick, reason: license.reason },
       ipAddress: getClientIp(req),
     });
@@ -62,6 +64,8 @@ const update = async (req, res) => {
     await logAction('UPDATE_LICENSE', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       details: {
         nick: license.nick,
         before: { nick: license.nick, reason: license.reason, isReturned: license.isReturned },
@@ -85,6 +89,8 @@ const remove = async (req, res) => {
     await logAction('DELETE_LICENSE', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       details: { nick: license.nick, reason: license.reason, isReturned: license.isReturned },
       ipAddress: getClientIp(req),
     });

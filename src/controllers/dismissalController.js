@@ -99,6 +99,8 @@ const createDismissal = async (req, res) => {
     await logAction('CREATE_DISMISSAL', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       details: { playerNick, rank, reason, signedBy },
       ipAddress: getClientIp(req),
     });
@@ -129,6 +131,8 @@ const deleteDismissal = async (req, res) => {
     await logAction('DELETE_DISMISSAL', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       details: { playerNick: dismissal.playerNick, rank: dismissal.rank },
       ipAddress: getClientIp(req),
     });

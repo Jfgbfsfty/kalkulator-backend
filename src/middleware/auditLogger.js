@@ -14,6 +14,8 @@ const logAction = async (action, options = {}) => {
       action,
       performedBy: options.performedBy,
       performedByUsername: options.performedByUsername || 'unknown',
+      performedByDiscordId: options.performedByDiscordId || null,
+      performedByDiscordUsername: options.performedByDiscordUsername || null,
       targetUser: options.targetUser || null,
       targetResource: options.targetResource || null,
       details: options.details || null,

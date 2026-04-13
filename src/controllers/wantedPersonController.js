@@ -41,6 +41,8 @@ const create = async (req, res) => {
     await logAction('CREATE_WANTED_PERSON', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       details: { nick: person.nick, reason: person.reason, status: person.status },
       ipAddress: getClientIp(req),
     });
@@ -70,6 +72,8 @@ const update = async (req, res) => {
     await logAction('UPDATE_WANTED_PERSON', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       details: {
         nick: person.nick,
         before: { nick: person.nick, reason: person.reason, status: person.status },
@@ -94,6 +98,8 @@ const remove = async (req, res) => {
     await logAction('DELETE_WANTED_PERSON', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
+      performedByDiscordId: req.user.discordId || null,
+      performedByDiscordUsername: req.user.discordUsername || null,
       details: { nick: person.nick, reason: person.reason, status: person.status },
       ipAddress: getClientIp(req),
     });

@@ -16,6 +16,14 @@ const auditLogSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    performedByDiscordId: {
+      type: String,
+      default: null,
+    },
+    performedByDiscordUsername: {
+      type: String,
+      default: null,
+    },
     targetUser: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
