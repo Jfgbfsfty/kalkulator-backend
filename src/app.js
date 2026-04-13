@@ -25,6 +25,7 @@ const promotionRoutes = require('./routes/promotions');
 const cvRoutes = require('./routes/cv');
 const salaryRoutes = require('./routes/salary');
 const dismissalRoutes = require('./routes/dismissals');
+const promotionRequestRoutes = require('./routes/promotionRequests');
 
 const app = express();
 
@@ -87,6 +88,7 @@ app.use('/api/promotions', promotionRoutes);
 app.use('/api/cv', cvRoutes);
 app.use('/api/salary-config', salaryRoutes);
 app.use('/api/dismissals', dismissalRoutes);
+app.use('/api/promotion-requests', promotionRequestRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
