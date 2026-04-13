@@ -1,7 +1,9 @@
 const { body, validationResult } = require('express-validator');
 const PromotionRequest = require('../models/PromotionRequest');
+const Promotion = require('../models/Promotion');
 const callBotApi = require('../utils/botApi');
 const { logAction, getClientIp } = require('../middleware/auditLogger');
+const sendDiscordAudit = require('../utils/discordAudit');
 const logger = require('../utils/logger');
 
 const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 godziny
@@ -194,6 +196,78 @@ const review = async (req, res) => {
     request.reviewNote = reviewNote || '';
     request.reviewedAt = new Date();
     await request.save();
+
+    // Automatycznie wystaw awans przy zatwierdzeniu
+    if (status === 'ZATWIERDZONY') {
+      try {
+        const signedBy = req.user.username;
+        const autoReason = `Zatwierdzona prośba o awans (wniosek #${request._id.toString().slice(-6).toUpperCase()})`;
+
+        const promotion = await Promotion.create({
+          playerNick: request.discordNick,
+          type: 'AWANS',
+          fromRank: request.currentRank,
+          toRank: request.desiredRank,
+          reason: autoReason,
+          signedBy,
+          playerDiscordId: request.discordId || null,
+          issuedBy: req.user._id,
+          issuedByUsername: req.user.username,
+        });
+
+        const embed = {
+          color: 0x00ff88,
+          title: '⬆️ AWANS',
+          fields: [
+            { name: '👮 Gracz', value: request.discordNick, inline: true },
+            { name: '📊 Zmiana stopnia', value: `${request.currentRank} → ${request.desiredRank}`, inline: true },
+            { name: '📋 Powód', value: autoReason },
+            { name: '✍️ Podpisał', value: signedBy, inline: true },
+            { name: '👨‍💼 Wystawił', value: req.user.username, inline: true },
+          ],
+          timestamp: new Date().toISOString(),
+          footer: { text: 'Kalkulator Mandatów | Polskie RP' },
+        };
+
+        let discordMessageId = null;
+        try {
+          const botRes = await callBotApi('/api/send-promotion', { embed, discordUserId: request.discordId || null });
+          discordMessageId = botRes.messageId || null;
+        } catch (botErr) {
+          logger.warn(`Auto-promotion Discord send failed: ${botErr.message}`);
+        }
+
+        if (request.discordId) {
+          try {
+            const swapRes = await callBotApi('/api/swap-roles', {
+              discordUserId: request.discordId,
+              fromRank: request.currentRank,
+              toRank: request.desiredRank,
+            });
+            if (swapRes.errors?.length) logger.warn(`auto swap-roles: ${swapRes.errors.join(', ')}`);
+          } catch (swapErr) {
+            logger.warn(`auto swap-roles failed: ${swapErr.message}`);
+          }
+        }
+
+        promotion.discordMessageId = discordMessageId;
+        promotion.sentToDiscord = !!discordMessageId;
+        await promotion.save();
+
+        await logAction('CREATE_PROMOTION', {
+          performedBy: req.user._id,
+          performedByUsername: req.user.username,
+          performedByDiscordId: req.user.discordId || null,
+          performedByDiscordUsername: req.user.discordUsername || null,
+          details: { playerNick: request.discordNick, type: 'AWANS', fromRank: request.currentRank, toRank: request.desiredRank, signedBy, source: 'promotion-request' },
+          ipAddress: getClientIp(req),
+        });
+        sendDiscordAudit('CREATE_PROMOTION', req.user.username, { 'Gracz': request.discordNick, 'Typ': 'AWANS (auto)', 'Zmiana stopnia': `${request.currentRank} → ${request.desiredRank}`, 'Podpisał': signedBy }, getClientIp(req));
+      } catch (autoErr) {
+        logger.error(`Auto-create promotion failed: ${autoErr.message}`);
+        // Nie przerywamy — wniosek już zatwierdzony
+      }
+    }
 
     await logAction('REVIEW_PROMOTION_REQUEST', {
       performedBy: req.user._id,
