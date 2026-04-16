@@ -18,6 +18,8 @@ const cvApplicationSchema = new mongoose.Schema(
     },
     discordMessageId: { type: String, default: null },
     sentToDiscord: { type: Boolean, default: false },
+    discordUserId: { type: String, trim: true, maxlength: 30, default: null },
+    reviewedBy: { type: String, default: null },
   },
   { timestamps: true }
 );

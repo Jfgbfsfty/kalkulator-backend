@@ -44,4 +44,19 @@ const writeLimiter = rateLimit({
   },
 });
 
-module.exports = { authLimiter, generalLimiter, writeLimiter };
+/**
+ * Rate limiter dla formularza CV – max 1 zgłoszenie na 24h per IP
+ */
+const cvLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000, // 24 godziny
+  max: 1,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip,
+  message: {
+    success: false,
+    message: 'Możesz wysłać tylko jedno CV na 24 godziny. Spróbuj ponownie jutro.',
+  },
+});
+
+module.exports = { authLimiter, generalLimiter, writeLimiter, cvLimiter };

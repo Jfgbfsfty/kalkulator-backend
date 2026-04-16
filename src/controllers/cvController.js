@@ -13,6 +13,7 @@ const cvValidation = [
   body('availability').optional().trim().isLength({ max: 300 }),
   body('contactDiscord').optional().trim().isLength({ max: 100 }),
   body('additionalInfo').optional().trim().isLength({ max: 700 }),
+  body('discordUserId').optional().trim().matches(/^\d{17,20}$/).withMessage('Discord ID musi być liczbą 17-20 cyfr'),
 ];
 
 /**
@@ -24,7 +25,7 @@ const submitCv = async (req, res) => {
   if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
   try {
-    const { nick, age, whyJoin, experience, availability, contactDiscord, additionalInfo } = req.body;
+    const { nick, age, whyJoin, experience, availability, contactDiscord, additionalInfo, discordUserId } = req.body;
 
     const cv = await CvApplication.create({
       nick,
@@ -34,6 +35,7 @@ const submitCv = async (req, res) => {
       availability: availability || '',
       contactDiscord: contactDiscord || '',
       additionalInfo: additionalInfo || '',
+      discordUserId: discordUserId || null,
       submittedBy: req.user?._id || null,
       submittedByUsername: req.user?.username || 'Anonim',
     });
@@ -51,6 +53,7 @@ const submitCv = async (req, res) => {
       footer: { text: `Przesłał: ${req.user?.username || contactDiscord || nick} | Kalkulator Mandatów – Polskie RP` },
     };
 
+    if (discordUserId) embed.fields.push({ name: '🔑 Discord ID', value: discordUserId, inline: true });
     if (experience) embed.fields.push({ name: '🎖️ Doświadczenie', value: experience.slice(0, 1024) });
     if (availability) embed.fields.push({ name: '🕐 Dostępność', value: availability, inline: true });
     if (contactDiscord) embed.fields.push({ name: '💬 Kontakt Discord', value: contactDiscord, inline: true });
@@ -58,7 +61,11 @@ const submitCv = async (req, res) => {
 
     let discordMessageId = null;
     try {
-      const botRes = await callBotApi('/api/send-cv', { embed });
+      const botRes = await callBotApi('/api/send-cv', {
+        embed,
+        cvId: cv._id.toString(),
+        discordUserId: cv.discordUserId || null,
+      });
       discordMessageId = botRes.messageId || null;
     } catch (botErr) {
       logger.warn(`CV Discord send failed: ${botErr.message}`);
@@ -139,4 +146,42 @@ const updateCvStatus = async (req, res) => {
   }
 };
 
-module.exports = { submitCv, getCvApplications, updateCvStatus, cvValidation };
+/**
+ * PUT /api/cv/:id/bot-review
+ * Aktualizacja statusu CV przez bota Discord (x-bot-secret)
+ */
+const botUpdateCvStatus = async (req, res) => {
+  const secret = req.headers['x-bot-secret'];
+  const expected = (process.env.BOT_API_SECRET || '').replace(/^["']|["']$/g, '');
+  if (!secret || secret !== expected) {
+    return res.status(401).json({ success: false, message: 'Nieautoryzowany' });
+  }
+
+  const { status, reviewedBy } = req.body;
+  const allowed = ['ZAAKCEPTOWANE', 'ODRZUCONE'];
+  if (!allowed.includes(status)) {
+    return res.status(400).json({ success: false, message: 'Nieprawidłowy status' });
+  }
+
+  try {
+    const cv = await CvApplication.findByIdAndUpdate(
+      req.params.id,
+      { status, reviewedBy: reviewedBy || null },
+      { new: true }
+    );
+    if (!cv) return res.status(404).json({ success: false, message: 'Nie znaleziono CV' });
+
+    await logAction(`CV_${status}`, {
+      performedByUsername: `[BOT] ${reviewedBy || 'Discord'}`,
+      details: { nick: cv.nick, cvId: cv._id.toString(), status },
+      ipAddress: 'bot-internal',
+    });
+
+    res.json({ success: true, data: cv });
+  } catch (err) {
+    logger.error(`botUpdateCvStatus: ${err.message}`);
+    res.status(500).json({ success: false, message: 'Błąd serwera' });
+  }
+};
+
+module.exports = { submitCv, getCvApplications, updateCvStatus, botUpdateCvStatus, cvValidation };
