@@ -46,13 +46,22 @@ const writeLimiter = rateLimit({
 
 /**
  * Rate limiter dla formularza CV – max 1 zgłoszenie na 24h per IP
+ * keyGenerator ręcznie czyta X-Forwarded-For żeby działać za każdym proxy
  */
 const cvLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000, // 24 godziny
   max: 1,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.ip,
+  keyGenerator: (req) => {
+    const xff = req.headers['x-forwarded-for'];
+    if (xff) {
+      // Pierwszy adres w X-Forwarded-For to oryginalny klient
+      return xff.split(',')[0].trim();
+    }
+    return req.socket?.remoteAddress || req.ip;
+  },
+  skip: () => false, // nigdy nie pomijaj
   message: {
     success: false,
     message: 'Możesz wysłać tylko jedno CV na 24 godziny. Spróbuj ponownie jutro.',

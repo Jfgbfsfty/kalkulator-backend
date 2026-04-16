@@ -29,6 +29,10 @@ const promotionRequestRoutes = require('./routes/promotionRequests');
 
 const app = express();
 
+// Zaufaj pierwszemu proxy (Railway, Heroku, Nginx itp.)
+// Dzięki temu req.ip zwraca prawdziwe IP klienta z X-Forwarded-For
+app.set('trust proxy', 1);
+
 // ===========================
 // SECURITY MIDDLEWARE
 // ===========================
