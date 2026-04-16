@@ -31,8 +31,14 @@ const getEnv = (key, fallback = '') =>
  */
 router.post('/setup', authenticate, authorize('SUPERADMIN'), async (req, res) => {
   try {
-    const secret = speakeasy.generateSecret({ name: `Polskie RP Panel (${req.user.username})` });
-    const qrDataUrl = await qrcode.toDataURL(secret.otpauth_url);
+    const secret = speakeasy.generateSecret({ length: 20 });
+    const otpauthUrl = speakeasy.otpauthURL({
+      secret: secret.base32,
+      label: encodeURIComponent(req.user.username || 'superadmin'),
+      issuer: 'Polskie RP Panel',
+      encoding: 'base32',
+    });
+    const qrDataUrl = await qrcode.toDataURL(otpauthUrl);
 
     await User.findByIdAndUpdate(req.user._id, { twoFactorSecret: secret.base32 });
 
