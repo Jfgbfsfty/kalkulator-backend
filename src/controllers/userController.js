@@ -241,4 +241,32 @@ const getAuditLogs = async (req, res) => {
   }
 };
 
-module.exports = { getUsers, createUser, updateUser, deleteUser, getAuditLogs, createUserValidation };
+/**
+ * GET /api/users/notifications
+ * Ostatnie zdarzenia systemu (polling co 30s) – wszyscy zalogowani
+ */
+const getNotifications = async (req, res) => {
+  try {
+    const AuditLog = require('../models/AuditLog');
+    const since = req.query.since
+      ? new Date(req.query.since)
+      : new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    // Walidacja daty – zapobiegaj unbounded query
+    if (isNaN(since.getTime()) || since < new Date(Date.now() - 7 * 24 * 3600 * 1000)) {
+      return res.status(400).json({ success: false, message: 'Nieprawidłowy parametr since' });
+    }
+
+    const logs = await AuditLog.find({ createdAt: { $gt: since } })
+      .sort({ createdAt: -1 })
+      .limit(25)
+      .lean();
+
+    res.json({ success: true, data: logs, serverTime: new Date().toISOString() });
+  } catch (err) {
+    logger.error(`getNotifications: ${err.message}`);
+    res.status(500).json({ success: false, message: 'Błąd serwera' });
+  }
+};
+
+module.exports = { getUsers, createUser, updateUser, deleteUser, getAuditLogs, getNotifications, createUserValidation };

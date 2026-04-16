@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getUsers, createUser, updateUser, deleteUser, getAuditLogs, createUserValidation } = require('../controllers/userController');
+const { getUsers, createUser, updateUser, deleteUser, getAuditLogs, getNotifications, createUserValidation } = require('../controllers/userController');
 const authenticate = require('../middleware/authenticate');
 const { authorize } = require('../middleware/authorize');
 const { generalLimiter, writeLimiter } = require('../middleware/rateLimiter');
@@ -22,5 +22,8 @@ router.delete('/:id', authorize('SUPERADMIN'), writeLimiter, deleteUser);
 
 // Dziennik audytu (SZEF i wyżej)
 router.get('/audit-logs', authorize('SZEF'), getAuditLogs);
+
+// Powiadomienia – wszyscy zalogowani
+router.get('/notifications', getNotifications);
 
 module.exports = router;
