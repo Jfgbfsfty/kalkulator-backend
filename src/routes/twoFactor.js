@@ -10,7 +10,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { authenticator } = require('otplib');
+const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
@@ -31,15 +31,12 @@ const getEnv = (key, fallback = '') =>
  */
 router.post('/setup', authenticate, authorize('SUPERADMIN'), async (req, res) => {
   try {
-    const secret = authenticator.generateSecret();
-    const appName = 'Polskie RP Panel';
-    const otpauth = authenticator.keyuri(req.user.username, appName, secret);
-    const qrDataUrl = await qrcode.toDataURL(otpauth);
+    const secret = speakeasy.generateSecret({ name: `Polskie RP Panel (${req.user.username})` });
+    const qrDataUrl = await qrcode.toDataURL(secret.otpauth_url);
 
-    // Zapisz secret (jeszcze nie aktywne)
-    await User.findByIdAndUpdate(req.user._id, { twoFactorSecret: secret });
+    await User.findByIdAndUpdate(req.user._id, { twoFactorSecret: secret.base32 });
 
-    res.json({ success: true, qrCode: qrDataUrl, secret });
+    res.json({ success: true, qrCode: qrDataUrl, secret: secret.base32 });
   } catch (err) {
     logger.error(`2FA setup: ${err.message}`);
     res.status(500).json({ success: false, message: 'Błąd generowania 2FA' });
@@ -60,7 +57,12 @@ router.post('/enable', authenticate, authorize('SUPERADMIN'), async (req, res) =
       return res.status(400).json({ success: false, message: 'Najpierw wygeneruj kod QR' });
     }
 
-    const isValid = authenticator.verify({ token: code.replace(/\s/g, ''), secret: user.twoFactorSecret });
+    const isValid = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token: code.replace(/\s/g, ''),
+      window: 1,
+    });
     if (!isValid) {
       return res.status(400).json({ success: false, message: 'Nieprawidłowy kod. Spróbuj ponownie.' });
     }
@@ -88,7 +90,12 @@ router.post('/disable', authenticate, authorize('SUPERADMIN'), async (req, res) 
       return res.status(400).json({ success: false, message: '2FA nie jest aktywne' });
     }
 
-    const isValid = authenticator.verify({ token: code.replace(/\s/g, ''), secret: user.twoFactorSecret });
+    const isValid = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token: code.replace(/\s/g, ''),
+      window: 1,
+    });
     if (!isValid) {
       return res.status(400).json({ success: false, message: 'Nieprawidłowy kod 2FA' });
     }
@@ -134,7 +141,12 @@ router.post('/verify', authLimiter, async (req, res) => {
       return res.status(401).json({ success: false, message: 'Błąd weryfikacji 2FA.' });
     }
 
-    const isValid = authenticator.verify({ token: code.replace(/\s/g, ''), secret: user.twoFactorSecret });
+    const isValid = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token: code.replace(/\s/g, ''),
+      window: 1,
+    });
     if (!isValid) {
       await logAction('LOGIN_FAILED', {
         performedBy: user._id,
