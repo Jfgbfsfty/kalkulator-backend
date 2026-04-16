@@ -1,4 +1,5 @@
 const { body, validationResult } = require('express-validator');
+const jwt = require('jsonwebtoken');
 const CvApplication = require('../models/CvApplication');
 const callBotApi = require('../utils/botApi');
 const { logAction, getClientIp } = require('../middleware/auditLogger');
@@ -13,7 +14,6 @@ const cvValidation = [
   body('availability').optional().trim().isLength({ max: 300 }),
   body('contactDiscord').optional().trim().isLength({ max: 100 }),
   body('additionalInfo').optional().trim().isLength({ max: 700 }),
-  body('discordUserId').optional().trim().matches(/^\d{17,20}$/).withMessage('Discord ID musi być liczbą 17-20 cyfr'),
 ];
 
 /**
@@ -24,8 +24,42 @@ const submitCv = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
+  // ── Weryfikacja Discord OAuth2 ──
+  const discordToken = req.body.discordToken;
+  if (!discordToken) {
+    return res.status(400).json({
+      success: false,
+      message: 'Wymagana weryfikacja konta Discord. Kliknij „Zaloguj przez Discord” i spróbuj ponownie.',
+    });
+  }
+
+  let verifiedDiscordId, verifiedDiscordUsername;
   try {
-    const { nick, age, whyJoin, experience, availability, contactDiscord, additionalInfo, discordUserId } = req.body;
+    const jwtSecret = (process.env.JWT_SECRET || '').replace(/^["']|["']$/g, '');
+    const decoded = jwt.verify(discordToken, jwtSecret);
+    verifiedDiscordId = decoded.discordId;
+    verifiedDiscordUsername = decoded.discordUsername;
+  } catch (e) {
+    return res.status(401).json({
+      success: false,
+      message: 'Token Discord wygasł lub jest nieprawidłowy. Zweryfikuj konto Discord ponownie (odwież stronę).',
+    });
+  }
+
+  try {
+    // Blokada 24h per konto Discord
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const existingCv = await CvApplication.findOne({
+      discordUserId: verifiedDiscordId,
+      createdAt: { $gt: since24h },
+    });
+    if (existingCv) {
+      return res.status(429).json({
+        success: false,
+        message: 'Możesz wysłać tylko jedno CV na 24 godziny per konto Discord. Spróbuj ponownie jutro.',
+      });
+    }
+    const { nick, age, whyJoin, experience, availability, contactDiscord, additionalInfo } = req.body;
 
     const cv = await CvApplication.create({
       nick,
@@ -35,7 +69,7 @@ const submitCv = async (req, res) => {
       availability: availability || '',
       contactDiscord: contactDiscord || '',
       additionalInfo: additionalInfo || '',
-      discordUserId: discordUserId || null,
+      discordUserId: verifiedDiscordId,
       submittedBy: req.user?._id || null,
       submittedByUsername: req.user?.username || 'Anonim',
     });
@@ -53,7 +87,7 @@ const submitCv = async (req, res) => {
       footer: { text: `Przesłał: ${req.user?.username || contactDiscord || nick} | Kalkulator Mandatów – Polskie RP` },
     };
 
-    if (discordUserId) embed.fields.push({ name: '🔑 Discord ID', value: discordUserId, inline: true });
+    embed.fields.push({ name: '🔑 Discord', value: `${verifiedDiscordUsername} (${verifiedDiscordId})`, inline: true });
     if (experience) embed.fields.push({ name: '🎖️ Doświadczenie', value: experience.slice(0, 1024) });
     if (availability) embed.fields.push({ name: '🕐 Dostępność', value: availability, inline: true });
     if (contactDiscord) embed.fields.push({ name: '💬 Kontakt Discord', value: contactDiscord, inline: true });
