@@ -38,11 +38,10 @@ router.post('/setup', authenticate, authorize('SUPERADMIN'), async (req, res) =>
       issuer: 'Polskie RP Panel',
       encoding: 'base32',
     });
-    const qrDataUrl = await qrcode.toDataURL(otpauthUrl);
 
     await User.findByIdAndUpdate(req.user._id, { twoFactorSecret: secret.base32 });
 
-    res.json({ success: true, qrCode: qrDataUrl, secret: secret.base32 });
+    res.json({ success: true, otpauthUrl, secret: secret.base32 });
   } catch (err) {
     logger.error(`2FA setup: ${err.message}`);
     res.status(500).json({ success: false, message: 'Błąd generowania 2FA' });
