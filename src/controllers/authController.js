@@ -1,4 +1,5 @@
 const { body, validationResult } = require('express-validator');
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
 const { generateAccessToken, generateRefreshToken, hashRefreshToken } = require('../utils/jwt');
@@ -72,6 +73,22 @@ const login = async (req, res) => {
 
     // Zresetuj licznik i zapisz ostatnie logowanie
     await user.resetFailedLogins();
+
+    // Jeśli 2FA aktywne – zwróć tymczasowy token zamiast pełnych tokenów
+    if (user.twoFactorEnabled) {
+      const jwtSecret = (process.env.JWT_SECRET || '').replace(/^["']|["']$/g, '');
+      const tempToken = jwt.sign(
+        { userId: user._id, type: '2fa_pending' },
+        jwtSecret,
+        { expiresIn: '5m' }
+      );
+      return res.status(200).json({
+        success: true,
+        requires2FA: true,
+        tempToken,
+      });
+    }
+
     user.lastLogin = new Date();
     user.lastLoginIp = ip;
     await user.save();

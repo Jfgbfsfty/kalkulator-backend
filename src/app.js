@@ -12,6 +12,7 @@ const logger = require('./utils/logger');
 
 // Importy routerów
 const authRoutes = require('./routes/auth');
+const twoFactorRoutes = require('./routes/twoFactor');
 const userRoutes = require('./routes/users');
 const mandateRoutes = require('./routes/mandates');
 const wantedPersonRoutes = require('./routes/wantedPersons');
@@ -81,6 +82,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // ROUTES
 // ===========================
 app.use('/api/auth', authRoutes);
+app.use('/api/auth/2fa', twoFactorRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/mandates', mandateRoutes);
 app.use('/api/wanted-persons', wantedPersonRoutes);
