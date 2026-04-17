@@ -1,4 +1,5 @@
 const { body, validationResult } = require('express-validator');
+const jwt = require('jsonwebtoken');
 const PromotionRequest = require('../models/PromotionRequest');
 const Promotion = require('../models/Promotion');
 const callBotApi = require('../utils/botApi');
@@ -8,9 +9,12 @@ const logger = require('../utils/logger');
 
 const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 godziny
 
+const getEnv = (key, fallback = '') =>
+  (process.env[key] || fallback).replace(/^["']|["']$/g, '');
+
 const requestValidation = [
   body('discordNick').trim().notEmpty().isLength({ max: 100 }).withMessage('Nick Discord wymagany (max 100)'),
-  body('discordId').trim().notEmpty().matches(/^\d{17,20}$/).withMessage('Discord ID musi być liczbą 17-20 cyfr'),
+  body('discordToken').trim().notEmpty().withMessage('Wymagana weryfikacja Discord (brak tokenu)'),
   body('currentRank').trim().notEmpty().isLength({ max: 50 }).withMessage('Aktualny stopień wymagany'),
   body('desiredRank').trim().notEmpty().isLength({ max: 50 }).withMessage('Żądany stopień wymagany'),
   body('hoursWorked').isFloat({ min: 0, max: 9999 }).withMessage('Przepracowane godziny: 0–9999'),
@@ -110,13 +114,23 @@ const create = async (req, res) => {
       }
     }
 
-    const { discordNick, discordId, currentRank, desiredRank, hoursWorked, reason, achievements, availability, additionalInfo } = req.body;
+    const { discordNick, discordToken, currentRank, desiredRank, hoursWorked, reason, achievements, availability, additionalInfo } = req.body;
+
+    // Weryfikuj token Discord (JWT wystawiony przez /api/promotion-auth)
+    let verifiedDiscordId, verifiedDiscordUsername;
+    try {
+      const decoded = jwt.verify(discordToken, getEnv('JWT_SECRET'));
+      verifiedDiscordId = decoded.discordId;
+      verifiedDiscordUsername = decoded.discordUsername;
+    } catch {
+      return res.status(401).json({ success: false, message: 'Token Discord wygasł lub jest nieprawidłowy. Zweryfikuj się ponownie.' });
+    }
 
     const request = await PromotionRequest.create({
       submittedBy: req.user._id,
       submittedByUsername: req.user.username,
-      discordNick,
-      discordId,
+      discordNick: verifiedDiscordUsername || discordNick,
+      discordId: verifiedDiscordId,
       currentRank,
       desiredRank,
       hoursWorked,
@@ -131,8 +145,8 @@ const create = async (req, res) => {
       color: 0xf59e0b,
       title: '📋 NOWY WNIOSEK O AWANS',
       fields: [
-        { name: '🎮 Nick Discord', value: discordNick, inline: true },
-        { name: '🆔 Discord ID', value: discordId, inline: true },
+        { name: '🎮 Nick Discord', value: verifiedDiscordUsername || discordNick, inline: true },
+        { name: '🆔 Discord ID', value: verifiedDiscordId, inline: true },
         { name: '🎖️ Aktualny stopień', value: currentRank, inline: true },
         { name: '⭐ Wnioskowany stopień', value: desiredRank, inline: true },
         { name: '⏱️ Przepracowane godziny', value: `~${hoursWorked}h`, inline: true },
