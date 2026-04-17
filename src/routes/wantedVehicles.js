@@ -8,6 +8,7 @@ const upload = require('../config/multer');
 router.use(authenticate);
 
 router.get('/', generalLimiter, ctrl.getAll);
+router.post('/clear-old-images', writeLimiter, ctrl.clearOldFileUrls);
 router.post('/', writeLimiter, upload.single('image'), ctrl.validation, ctrl.create);
 router.put('/:id', writeLimiter, upload.single('image'), ctrl.validation, ctrl.update);
 router.delete('/:id', writeLimiter, ctrl.remove);

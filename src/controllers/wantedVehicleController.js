@@ -117,4 +117,17 @@ const remove = async (req, res) => {
   }
 };
 
-module.exports = { getAll, create, update, remove, validation };
+// Wyczyść stare imageUrl które są ścieżkami do plików (nie base64)
+const clearOldFileUrls = async (req, res) => {
+  try {
+    const result = await WantedVehicle.updateMany(
+      { imageUrl: { $regex: '^/uploads/', $options: 'i' } },
+      { $set: { imageUrl: null } }
+    );
+    res.json({ success: true, cleared: result.modifiedCount });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { getAll, create, update, remove, validation, clearOldFileUrls };
