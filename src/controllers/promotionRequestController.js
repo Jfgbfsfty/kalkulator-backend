@@ -13,8 +13,7 @@ const getEnv = (key, fallback = '') =>
   (process.env[key] || fallback).replace(/^["']|["']$/g, '');
 
 const requestValidation = [
-  body('discordNick').trim().notEmpty().isLength({ max: 100 }).withMessage('Nick Discord wymagany (max 100)'),
-  body('targetUserId').optional({ checkFalsy: true }).isMongoId().withMessage('Nieprawidłowe ID użytkownika'),
+  body('discordToken').notEmpty().withMessage('Token Discord wymagany (zaloguj się przez Discord)'),
   body('currentRank').trim().notEmpty().isLength({ max: 50 }).withMessage('Aktualny stopień wymagany'),
   body('desiredRank').trim().notEmpty().isLength({ max: 50 }).withMessage('Żądany stopień wymagany'),
   body('hoursWorked').isFloat({ min: 0, max: 9999 }).withMessage('Przepracowane godziny: 0–9999'),
@@ -114,18 +113,18 @@ const create = async (req, res) => {
       }
     }
 
-    const { discordNick, targetUserId, currentRank, desiredRank, hoursWorked, reason, achievements, availability, additionalInfo } = req.body;
+    const { discordToken, currentRank, desiredRank, hoursWorked, reason, achievements, availability, additionalInfo } = req.body;
 
-    // Jeśli podano targetUserId, pobierz dane Discord z bazy
-    let resolvedDiscordId = null;
-    let resolvedDiscordNick = discordNick;
-    if (targetUserId) {
-      const User = require('../models/User');
-      const targetUser = await User.findById(targetUserId).select('discordId discordUsername username').lean();
-      if (targetUser) {
-        resolvedDiscordId = targetUser.discordId || null;
-        resolvedDiscordNick = targetUser.discordUsername || targetUser.username;
-      }
+    // Zweryfikuj token Discord OAuth2
+    const jwtSecret = getEnv('JWT_SECRET');
+    let resolvedDiscordId, resolvedDiscordNick;
+    try {
+      const payload = jwt.verify(discordToken, jwtSecret);
+      resolvedDiscordId = payload.discordId;
+      resolvedDiscordNick = payload.discordUsername;
+      if (!resolvedDiscordId || !resolvedDiscordNick) throw new Error('Niepełne dane');
+    } catch {
+      return res.status(401).json({ success: false, message: 'Token Discord wygasł lub jest nieprawidłowy. Zaloguj się ponownie przez Discord.' });
     }
 
     const request = await PromotionRequest.create({
