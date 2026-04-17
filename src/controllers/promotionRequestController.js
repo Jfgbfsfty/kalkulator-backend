@@ -14,7 +14,7 @@ const getEnv = (key, fallback = '') =>
 
 const requestValidation = [
   body('discordNick').trim().notEmpty().isLength({ max: 100 }).withMessage('Nick Discord wymagany (max 100)'),
-  body('discordToken').trim().notEmpty().withMessage('Wymagana weryfikacja Discord (brak tokenu)'),
+  body('targetUserId').optional({ checkFalsy: true }).isMongoId().withMessage('Nieprawidłowe ID użytkownika'),
   body('currentRank').trim().notEmpty().isLength({ max: 50 }).withMessage('Aktualny stopień wymagany'),
   body('desiredRank').trim().notEmpty().isLength({ max: 50 }).withMessage('Żądany stopień wymagany'),
   body('hoursWorked').isFloat({ min: 0, max: 9999 }).withMessage('Przepracowane godziny: 0–9999'),
@@ -114,23 +114,25 @@ const create = async (req, res) => {
       }
     }
 
-    const { discordNick, discordToken, currentRank, desiredRank, hoursWorked, reason, achievements, availability, additionalInfo } = req.body;
+    const { discordNick, targetUserId, currentRank, desiredRank, hoursWorked, reason, achievements, availability, additionalInfo } = req.body;
 
-    // Weryfikuj token Discord (JWT wystawiony przez /api/promotion-auth)
-    let verifiedDiscordId, verifiedDiscordUsername;
-    try {
-      const decoded = jwt.verify(discordToken, getEnv('JWT_SECRET'));
-      verifiedDiscordId = decoded.discordId;
-      verifiedDiscordUsername = decoded.discordUsername;
-    } catch {
-      return res.status(401).json({ success: false, message: 'Token Discord wygasł lub jest nieprawidłowy. Zweryfikuj się ponownie.' });
+    // Jeśli podano targetUserId, pobierz dane Discord z bazy
+    let resolvedDiscordId = null;
+    let resolvedDiscordNick = discordNick;
+    if (targetUserId) {
+      const User = require('../models/User');
+      const targetUser = await User.findById(targetUserId).select('discordId discordUsername username').lean();
+      if (targetUser) {
+        resolvedDiscordId = targetUser.discordId || null;
+        resolvedDiscordNick = targetUser.discordUsername || targetUser.username;
+      }
     }
 
     const request = await PromotionRequest.create({
       submittedBy: req.user._id,
       submittedByUsername: req.user.username,
-      discordNick: verifiedDiscordUsername || discordNick,
-      discordId: verifiedDiscordId,
+      discordNick: resolvedDiscordNick,
+      discordId: resolvedDiscordId,
       currentRank,
       desiredRank,
       hoursWorked,
@@ -145,8 +147,8 @@ const create = async (req, res) => {
       color: 0xf59e0b,
       title: '📋 NOWY WNIOSEK O AWANS',
       fields: [
-        { name: '🎮 Nick Discord', value: verifiedDiscordUsername || discordNick, inline: true },
-        { name: '🆔 Discord ID', value: verifiedDiscordId, inline: true },
+        { name: '🎮 Nick Discord', value: resolvedDiscordNick, inline: true },
+        { name: '🆔 Discord ID', value: resolvedDiscordId || 'brak', inline: true },
         { name: '🎖️ Aktualny stopień', value: currentRank, inline: true },
         { name: '⭐ Wnioskowany stopień', value: desiredRank, inline: true },
         { name: '⏱️ Przepracowane godziny', value: `~${hoursWorked}h`, inline: true },
@@ -176,7 +178,7 @@ const create = async (req, res) => {
       performedByUsername: req.user.username,
       performedByDiscordId: req.user.discordId || null,
       performedByDiscordUsername: req.user.discordUsername || null,
-      details: { discordNick, currentRank, desiredRank, hoursWorked },
+      details: { discordNick: resolvedDiscordNick, currentRank, desiredRank, hoursWorked },
       ipAddress: getClientIp(req),
     });
 

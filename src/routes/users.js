@@ -11,6 +11,27 @@ router.use(generalLimiter);
 // Pobierz listę użytkowników (SZEF i wyżej)
 router.get('/', authorize('SZEF'), getUsers);
 
+// Wyszukaj użytkownika po username/discordUsername (ZASTEPCA i wyżej)
+router.get('/search', authorize('ZASTEPCA'), async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q) return res.json({ success: true, data: [] });
+  try {
+    const User = require('../models/User');
+    const users = await User.find({
+      $or: [
+        { username: { $regex: q, $options: 'i' } },
+        { discordUsername: { $regex: q, $options: 'i' } },
+      ],
+    })
+      .select('username discordId discordUsername role')
+      .limit(10)
+      .lean();
+    res.json({ success: true, data: users });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Błąd wyszukiwania' });
+  }
+});
+
 // Utwórz użytkownika (SZEF i wyżej)
 router.post('/', authorize('SZEF'), writeLimiter, createUserValidation, createUser);
 
