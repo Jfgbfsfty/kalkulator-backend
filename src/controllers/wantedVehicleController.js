@@ -1,19 +1,8 @@
 const { body, validationResult } = require('express-validator');
-const path = require('path');
-const fs = require('fs');
 const WantedVehicle = require('../models/WantedVehicle');
 const { logAction, getClientIp } = require('../middleware/auditLogger');
 const sendDiscordAudit = require('../utils/discordAudit');
 const logger = require('../utils/logger');
-
-const deleteImageFile = (imageUrl) => {
-  if (!imageUrl) return;
-  const filename = path.basename(imageUrl);
-  const filepath = path.join(__dirname, '../../uploads/vehicles', filename);
-  fs.unlink(filepath, (err) => {
-    if (err && err.code !== 'ENOENT') logger.warn(`Nie można usunąć pliku: ${filepath}`);
-  });
-};
 
 const validation = [
   body('model').trim().notEmpty().isLength({ max: 80 }).withMessage('Model wymagany (max 80 znaków)'),
@@ -51,7 +40,7 @@ const create = async (req, res) => {
   }
   try {
     const data = { ...req.body, addedBy: req.user._id };
-    if (req.file) data.imageUrl = `/uploads/vehicles/${req.file.filename}`;
+    if (req.file) data.imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
     const vehicle = await WantedVehicle.create(data);
     await logAction('CREATE_WANTED_VEHICLE', {
       performedBy: req.user._id,
@@ -80,11 +69,9 @@ const update = async (req, res) => {
     const updateData = { updatedBy: req.user._id };
     allowed.forEach((f) => { if (req.body[f] !== undefined) updateData[f] = req.body[f]; });
     if (req.file) {
-      if (vehicle.imageUrl) deleteImageFile(vehicle.imageUrl);
-      updateData.imageUrl = `/uploads/vehicles/${req.file.filename}`;
+      updateData.imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
     }
     if (req.body.removeImage === 'true' && !req.file) {
-      if (vehicle.imageUrl) deleteImageFile(vehicle.imageUrl);
       updateData.imageUrl = null;
     }
     const updated = await WantedVehicle.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true })
@@ -113,7 +100,6 @@ const remove = async (req, res) => {
   try {
     const vehicle = await WantedVehicle.findById(req.params.id);
     if (!vehicle) return res.status(404).json({ success: false, message: 'Nie znaleziono' });
-    if (vehicle.imageUrl) deleteImageFile(vehicle.imageUrl);
     await WantedVehicle.findByIdAndDelete(req.params.id);
     await logAction('DELETE_WANTED_VEHICLE', {
       performedBy: req.user._id,
