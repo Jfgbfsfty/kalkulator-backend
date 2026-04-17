@@ -41,7 +41,7 @@ const create = async (req, res) => {
   try {
     const data = { ...req.body, addedBy: req.user._id };
     if (req.file) {
-      data.imageData = req.file.buffer;
+      data.imageData = req.file.buffer.toString('base64');
       data.imageMimeType = req.file.mimetype;
     }
     const vehicle = await WantedVehicle.create(data);
@@ -73,7 +73,7 @@ const update = async (req, res) => {
     const updateData = { updatedBy: req.user._id };
     allowed.forEach((f) => { if (req.body[f] !== undefined) updateData[f] = req.body[f]; });
     if (req.file) {
-      updateData.imageData = req.file.buffer;
+      updateData.imageData = req.file.buffer.toString('base64');
       updateData.imageMimeType = req.file.mimetype;
     }
     if (req.body.removeImage === 'true' && !req.file) {
@@ -145,14 +145,13 @@ const getImage = async (req, res) => {
     if (!vehicle) {
       return res.status(404).json({ success: false, message: 'Nie znaleziono pojazdu' });
     }
-    if (!vehicle.imageData || vehicle.imageData.length === 0) {
-      return res.status(404).json({ success: false, message: 'Brak zdjęcia' });
+    if (!vehicle.imageData) {
+      return res.status(404).end();
     }
-    const buf = Buffer.from(vehicle.imageData);
-    res.set('Content-Type', vehicle.imageMimeType || 'image/jpeg');
+    const buf = Buffer.from(vehicle.imageData, 'base64');
+    res.type(vehicle.imageMimeType || 'image/jpeg');
     res.set('Cache-Control', 'public, max-age=86400');
-    res.set('Content-Length', buf.length);
-    res.end(buf);
+    res.send(buf);
   } catch (err) {
     logger.error(`getImage: ${err.message}`);
     res.status(500).json({ success: false, message: 'Błąd serwera' });
