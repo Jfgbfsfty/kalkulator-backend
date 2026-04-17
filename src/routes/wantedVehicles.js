@@ -5,6 +5,9 @@ const authenticate = require('../middleware/authenticate');
 const { generalLimiter, writeLimiter } = require('../middleware/rateLimiter');
 const upload = require('../config/multer');
 
+// Publiczny endpoint do serwowania zdjęć (bez auth – ObjectId jest losowy)
+router.get('/:id/image', generalLimiter, ctrl.getImage);
+
 router.use(authenticate);
 
 router.get('/', generalLimiter, ctrl.getAll);

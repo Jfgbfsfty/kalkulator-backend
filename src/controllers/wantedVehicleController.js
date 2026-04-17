@@ -23,6 +23,7 @@ const getAll = async (req, res) => {
       ];
     }
     const vehicles = await WantedVehicle.find(filter)
+      .select('-imageData')
       .populate('addedBy', 'username')
       .sort({ createdAt: -1 });
     res.status(200).json({ success: true, data: vehicles });
@@ -35,13 +36,17 @@ const getAll = async (req, res) => {
 const create = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    if (req.file) deleteImageFile(`/uploads/vehicles/${req.file.filename}`);
     return res.status(400).json({ success: false, errors: errors.array() });
   }
   try {
     const data = { ...req.body, addedBy: req.user._id };
-    if (req.file) data.imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    if (req.file) {
+      data.imageData = req.file.buffer;
+      data.imageMimeType = req.file.mimetype;
+    }
     const vehicle = await WantedVehicle.create(data);
+    const vehicleOut = vehicle.toObject();
+    delete vehicleOut.imageData;
     await logAction('CREATE_WANTED_VEHICLE', {
       performedBy: req.user._id,
       performedByUsername: req.user.username,
@@ -51,7 +56,7 @@ const create = async (req, res) => {
       ipAddress: getClientIp(req),
     });
     sendDiscordAudit('CREATE_WANTED_VEHICLE', req.user.username, { 'Model': vehicle.model, 'Właściciel': vehicle.owner, 'Nr rejestracyjny': vehicle.licensePlate || '—', 'Powód': vehicle.reason }, getClientIp(req));
-    res.status(201).json({ success: true, data: vehicle });
+    res.status(201).json({ success: true, data: vehicleOut });
   } catch (err) {
     logger.error(`createWantedVehicle: ${err.message}`);
     res.status(500).json({ success: false, message: 'Błąd serwera' });
@@ -62,17 +67,18 @@ const update = async (req, res) => {
   try {
     const vehicle = await WantedVehicle.findById(req.params.id);
     if (!vehicle) {
-      if (req.file) deleteImageFile(`/uploads/vehicles/${req.file.filename}`);
       return res.status(404).json({ success: false, message: 'Nie znaleziono' });
     }
     const allowed = ['model', 'licensePlate', 'owner', 'reason', 'status'];
     const updateData = { updatedBy: req.user._id };
     allowed.forEach((f) => { if (req.body[f] !== undefined) updateData[f] = req.body[f]; });
     if (req.file) {
-      updateData.imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+      updateData.imageData = req.file.buffer;
+      updateData.imageMimeType = req.file.mimetype;
     }
     if (req.body.removeImage === 'true' && !req.file) {
-      updateData.imageUrl = null;
+      updateData.imageData = null;
+      updateData.imageMimeType = null;
     }
     const updated = await WantedVehicle.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true })
       .populate('addedBy', 'username');
@@ -130,4 +136,19 @@ const clearOldFileUrls = async (req, res) => {
   }
 };
 
-module.exports = { getAll, create, update, remove, validation, clearOldFileUrls };
+// Serwuj zdjęcie pojazdu (publiczny endpoint – ObjectId jest praktycznie nie do zgadnięcia)
+const getImage = async (req, res) => {
+  try {
+    const vehicle = await WantedVehicle.findById(req.params.id).select('imageData imageMimeType');
+    if (!vehicle || !vehicle.imageData) {
+      return res.status(404).json({ success: false, message: 'Brak zdjęcia' });
+    }
+    res.set('Content-Type', vehicle.imageMimeType || 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(vehicle.imageData);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Błąd serwera' });
+  }
+};
+
+module.exports = { getAll, create, update, remove, validation, clearOldFileUrls, getImage };

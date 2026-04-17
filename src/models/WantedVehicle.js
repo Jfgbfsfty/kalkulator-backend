@@ -47,6 +47,14 @@ const wantedVehicleSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    imageData: {
+      type: Buffer,
+      default: null,
+    },
+    imageMimeType: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true }
 );
