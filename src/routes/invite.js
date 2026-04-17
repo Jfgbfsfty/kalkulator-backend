@@ -269,10 +269,9 @@ router.post(
         username = `${safeUsername}_${suffix++}`;
       }
 
-      const hashedPassword = await bcrypt.hash(password, 12);
       const newUser = await User.create({
         username,
-        password: hashedPassword,
+        password,
         role: 'POLICJANT',
         discordId,
         discordUsername,
