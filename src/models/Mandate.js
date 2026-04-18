@@ -26,7 +26,7 @@ const mandateSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: [0, 'Punkty karne nie mogą być ujemne'],
-      max: [10, 'Punkty karne nie mogą przekraczać 10'],
+      max: [24, 'Punkty karne nie mogą przekraczać 24'],
     },
     category: {
       type: String,

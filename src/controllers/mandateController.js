@@ -8,7 +8,7 @@ const mandateValidation = [
   body('title').trim().notEmpty().isLength({ max: 100 }).withMessage('Tytuł wymagany (max 100 znaków)'),
   body('description').trim().notEmpty().isLength({ max: 500 }).withMessage('Opis wymagany (max 500 znaków)'),
   body('price').isFloat({ min: 0, max: 1000000 }).withMessage('Cena 0–1 000 000'),
-  body('penaltyPoints').optional().isInt({ min: 0, max: 10 }).withMessage('Punkty karne 0–10'),
+  body('penaltyPoints').optional().isInt({ min: 0, max: 24 }).withMessage('Punkty karne 0–24'),
   body('category').isIn(['PREDKOSC', 'POJAZD', 'DOKUMENTY', 'ZACHOWANIE', 'ALKOHOL', 'INNE']).withMessage('Nieprawidłowa kategoria'),
 ];
 
