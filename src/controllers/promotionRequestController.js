@@ -254,10 +254,10 @@ const review = async (req, res) => {
 
         if (request.discordId) {
           try {
+            // autoDetect: true — bot sam wykrywa rangę z ról Discord i nadaje następną (max Z-szef)
             const swapRes = await callBotApi('/api/swap-roles', {
               discordUserId: request.discordId,
-              fromRank: request.currentRank,
-              toRank: request.desiredRank,
+              autoDetect: true,
             });
             if (swapRes.errors?.length) logger.warn(`auto swap-roles: ${swapRes.errors.join(', ')}`);
           } catch (swapErr) {
