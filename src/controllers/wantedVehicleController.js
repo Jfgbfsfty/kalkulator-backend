@@ -23,7 +23,6 @@ const getAll = async (req, res) => {
       ];
     }
     const vehicles = await WantedVehicle.find(filter)
-      .select('-imageData')
       .populate('addedBy', 'username')
       .sort({ createdAt: -1 });
     res.status(200).json({ success: true, data: vehicles });
