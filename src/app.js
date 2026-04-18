@@ -47,9 +47,16 @@ app.use(helmet({
 }));
 
 // CORS – tylko dozwolony frontend
-const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/^"|"$/g, '');
+let frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/^"|"$/g, '').trim();
+if (frontendUrl !== 'http://localhost:3000' && !frontendUrl.startsWith('http')) {
+  frontendUrl = 'https://' + frontendUrl;
+}
+const allowedOrigins = [frontendUrl, frontendUrl.replace('://www.', '://'), frontendUrl.replace('://', '://www.')].filter(Boolean);
 app.use(cors({
-  origin: frontendUrl,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
