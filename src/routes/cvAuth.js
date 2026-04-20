@@ -19,6 +19,12 @@ const logger = require('../utils/logger');
 const getEnv = (key, fallback = '') =>
   (process.env[key] || fallback).replace(/^["']|["']$/g, '');
 
+const getFrontendUrl = () => {
+  let url = getEnv('FRONTEND_URL', 'http://localhost:3000').trim();
+  if (url !== 'http://localhost:3000' && !url.startsWith('http')) url = 'https://' + url;
+  return url.replace(/\/$/, '');
+};
+
 /**
  * GET /api/cv-auth/discord
  * Przekierowuje do Discord OAuth2
@@ -50,7 +56,7 @@ router.get('/discord', (req, res) => {
  */
 router.get('/discord/callback', async (req, res) => {
   const { code, error } = req.query;
-  const frontendUrl = getEnv('FRONTEND_URL', 'http://localhost:3000');
+  const frontendUrl = getFrontendUrl();
 
   if (error || !code) {
     return res.redirect(`${frontendUrl}/cv#discord_error=cancelled`);
