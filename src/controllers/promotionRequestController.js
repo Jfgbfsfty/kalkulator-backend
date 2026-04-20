@@ -59,6 +59,9 @@ const getAll = async (req, res) => {
  */
 const getCooldown = async (req, res) => {
   try {
+    // Jeśli brak zalogowanego użytkownika (publiczny endpoint) – brak cooldownu
+    if (!req.user) return res.json({ success: true, canSubmit: true, nextAllowedAt: null });
+
     const last = await PromotionRequest.findOne(
       { submittedBy: req.user._id },
       { createdAt: 1 },

@@ -15,10 +15,12 @@ const authenticate = require('../middleware/authenticate');
 const { authorize } = require('../middleware/authorize');
 const { writeLimiter } = require('../middleware/rateLimiter');
 
+// Cooldown – publiczny (nie wymaga logowania, identyfikacja po IP/discordId)
+router.get('/my-cooldown', getCooldown);
+
 router.use(authenticate);
 
-// Każdy zalogowany może sprawdzić cooldown i złożyć wniosek
-router.get('/my-cooldown', getCooldown);
+// Każdy zalogowany może złożyć wniosek
 router.post('/', writeLimiter, requestValidation, create);
 
 // Przegląd i zarządzanie – tylko SZEF / SUPERADMIN
