@@ -53,19 +53,19 @@ router.get('/discord/callback', async (req, res) => {
   const frontendUrl = getEnv('FRONTEND_URL', 'http://localhost:3000');
 
   if (error || !code) {
-    return res.redirect(`${frontendUrl}/promotion-request?discord_error=cancelled`);
+    return res.redirect(`${frontendUrl}/promotion-request#discord_error=cancelled`);
   }
 
   try {
     const tokenData = await exchangeCode(code);
     if (!tokenData.access_token) {
       logger.warn(`PromotionAuth Discord OAuth2: brak access_token. Odpowiedź: ${JSON.stringify(tokenData)}`);
-      return res.redirect(`${frontendUrl}/promotion-request?discord_error=token`);
+      return res.redirect(`${frontendUrl}/promotion-request#discord_error=token`);
     }
 
     const user = await getDiscordUser(tokenData.access_token);
     if (!user.id) {
-      return res.redirect(`${frontendUrl}/promotion-request?discord_error=user`);
+      return res.redirect(`${frontendUrl}/promotion-request#discord_error=user`);
     }
 
     // Krótkotrwały JWT z danymi Discorda (wygasa po 2h)
@@ -76,11 +76,12 @@ router.get('/discord/callback', async (req, res) => {
       { expiresIn: '2h' }
     );
 
-    const redirectTarget = `${frontendUrl}/promotion-request?discord_token=${encodeURIComponent(promoToken)}&discord_username=${encodeURIComponent(user.username)}&discord_id=${encodeURIComponent(user.id)}`;
+    // Hash fragment – nie trafia do serwera ani logów sieciowych
+    const redirectTarget = `${frontendUrl}/promotion-request#dt=${encodeURIComponent(promoToken)}&du=${encodeURIComponent(user.username)}`;
     res.redirect(redirectTarget);
   } catch (err) {
     logger.error(`PromotionAuth Discord callback: ${err.message}`);
-    res.redirect(`${frontendUrl}/promotion-request?discord_error=server`);
+    res.redirect(`${frontendUrl}/promotion-request#discord_error=server`);
   }
 });
 
