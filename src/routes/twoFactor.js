@@ -66,7 +66,7 @@ router.post('/enable', authenticate, authorize('SUPERADMIN'), async (req, res) =
       secret: user.twoFactorSecret,
       encoding: 'base32',
       token: code.replace(/\s/g, ''),
-      window: 1,
+      window: 2,
     });
     if (!isValid) {
       return res.status(400).json({ success: false, message: 'Nieprawidłowy kod. Spróbuj ponownie.' });
@@ -99,7 +99,7 @@ router.post('/disable', authenticate, authorize('SUPERADMIN'), async (req, res) 
       secret: user.twoFactorSecret,
       encoding: 'base32',
       token: code.replace(/\s/g, ''),
-      window: 1,
+      window: 2,
     });
     if (!isValid) {
       return res.status(400).json({ success: false, message: 'Nieprawidłowy kod 2FA' });
@@ -150,7 +150,7 @@ router.post('/verify', authLimiter, async (req, res) => {
       secret: user.twoFactorSecret,
       encoding: 'base32',
       token: code.replace(/\s/g, ''),
-      window: 1,
+      window: 2,
     });
     if (!isValid) {
       await logAction('LOGIN_FAILED', {
@@ -213,6 +213,41 @@ router.post('/verify', authLimiter, async (req, res) => {
   } catch (err) {
     logger.error(`2FA verify: ${err.message}`);
     res.status(500).json({ success: false, message: 'Błąd weryfikacji 2FA' });
+  }
+});
+
+/**
+ * POST /api/auth/2fa/emergency-disable
+ * Awaryjne wyłączenie 2FA – tylko hasłem (gdy kod TOTP nie działa)
+ * Wymaga: { username, password, emergencySecret }
+ */
+router.post('/emergency-disable', authLimiter, async (req, res) => {
+  const { username, password, emergencySecret } = req.body;
+  const expected = getEnv('EMERGENCY_2FA_SECRET');
+
+  if (!expected) {
+    return res.status(503).json({ success: false, message: 'Tryb awaryjny niedostępny (brak EMERGENCY_2FA_SECRET)' });
+  }
+  if (!emergencySecret || emergencySecret !== expected) {
+    return res.status(401).json({ success: false, message: 'Nieprawidłowy klucz awaryjny' });
+  }
+  if (!username || !password) {
+    return res.status(400).json({ success: false, message: 'Wymagany login i hasło' });
+  }
+
+  try {
+    const user = await User.findOne({ username }).select('+password +twoFactorSecret');
+    if (!user) return res.status(401).json({ success: false, message: 'Nieprawidłowe dane' });
+
+    const ok = await user.comparePassword(password);
+    if (!ok) return res.status(401).json({ success: false, message: 'Nieprawidłowe dane' });
+
+    await User.findByIdAndUpdate(user._id, { twoFactorEnabled: false, twoFactorSecret: null });
+    logger.warn(`EMERGENCY 2FA disable for ${user.username} from ${getClientIp(req)}`);
+    res.json({ success: true, message: '2FA wyłączone awaryjnie. Zaloguj się ponownie.' });
+  } catch (err) {
+    logger.error(`emergency-disable: ${err.message}`);
+    res.status(500).json({ success: false, message: 'Błąd serwera' });
   }
 });
 

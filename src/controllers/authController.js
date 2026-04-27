@@ -80,7 +80,7 @@ const login = async (req, res) => {
       const tempToken = jwt.sign(
         { userId: user._id, type: '2fa_pending' },
         jwtSecret,
-        { expiresIn: '5m' }
+        { expiresIn: '10m' }
       );
       return res.status(200).json({
         success: true,
